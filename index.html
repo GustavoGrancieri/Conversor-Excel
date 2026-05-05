@@ -73,7 +73,7 @@
         <p>Selecione um arquivo abaixo e clique em converter.</p>
 
         <!-- Inputs ocultos para carregar os arquivos -->
-        <input type="file" id="inputExcel" accept=".xlsx, .xls">
+        <input type="file" id="inputExcel" accept=".xlsx, .xls, .csv">
         <input type="file" id="inputTxt" accept=".txt">
 
         <!-- Botão 1: Adicionar Excel -->
@@ -135,59 +135,69 @@
         }
 
         function converterExcelParaTxt() {
-    const reader = new FileReader();
+            const reader = new FileReader();
 
-    reader.onload = function(e) {
-        const data = e.target.result;
+            reader.onload = function(e) {
+                const data = e.target.result;
 
-        const workbook = XLSX.read(data, {
-            type: 'array',
-            cellDates: true
-        });
+                const workbook = XLSX.read(data, {
+                    type: 'array',
+                    cellDates: true // Transforma datas do Excel em objetos Date no JS
+                });
 
-        const primeiraPlanilha = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[primeiraPlanilha];
+                const primeiraPlanilha = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[primeiraPlanilha];
 
-        const jsonData = XLSX.utils.sheet_to_json(worksheet, {
-            raw: true // <-- importante
-        });
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+                    raw: true 
+                });
 
-        const dadosFormatados = jsonData.map(linha => {
-            const novaLinha = {};
+                const dadosFormatados = jsonData.map(linha => {
+                    const novaLinha = {};
 
-            for (let chave in linha) {
-                let valor = linha[chave];
+                    for (let chave in linha) {
+                        let valor = linha[chave];
 
-                // Detecta Date real
-                if (valor instanceof Date) {
-                    const dia = String(valor.getDate()).padStart(2, '0');
-                    const mes = String(valor.getMonth() + 1).padStart(2, '0');
-                    const ano = valor.getFullYear();
+                        // 1. Detecta Date real
+                        if (valor instanceof Date) {
+                            // Usar GetUTC para evitar perda de 1 dia por causa do fuso horário brasileiro (GMT-3)
+                            const dia = String(valor.getUTCDate()).padStart(2, '0');
+                            const mes = String(valor.getUTCMonth() + 1).padStart(2, '0');
+                            const ano = valor.getUTCFullYear();
 
-                    valor = `${dia}/${mes}/${ano}`;
-                }
+                            valor = `${dia}/${mes}/${ano}`;
+                        } 
+                        // 2. Detecta datas que vieram como texto no formato ISO (ex: YYYY-MM-DD ou YYYY/MM/DD)
+                        else if (typeof valor === 'string') {
+                            const regexDataISO = /^(\d{4})[-/](\d{2})[-/](\d{2})(T.*)?$/;
+                            const match = valor.match(regexDataISO);
+                            if (match) {
+                                // Pega os grupos capturados e inverte para DD/MM/YYYY
+                                valor = `${match[3]}/${match[2]}/${match[1]}`;
+                            }
+                        }
 
-                novaLinha[chave] = valor;
-            }
+                        novaLinha[chave] = valor;
+                    }
 
-            return novaLinha;
-        });
+                    return novaLinha;
+                });
 
-        const sheet = XLSX.utils.json_to_sheet(dadosFormatados);
+                const sheet = XLSX.utils.json_to_sheet(dadosFormatados);
 
-        const txtFinal = XLSX.utils.sheet_to_csv(sheet, {
-            FS: "\t"
-        });
+                const txtFinal = XLSX.utils.sheet_to_csv(sheet, {
+                    FS: "\t"
+                });
 
-        baixarArquivo(
-            txtFinal,
-            arquivoAtual.name.replace(/\.[^/.]+$/, "") + ".txt",
-            "text/plain"
-        );
-    };
+                baixarArquivo(
+                    txtFinal,
+                    arquivoAtual.name.replace(/\.[^/.]+$/, "") + ".txt",
+                    "text/plain"
+                );
+            };
 
-    reader.readAsArrayBuffer(arquivoAtual);
-}
+            reader.readAsArrayBuffer(arquivoAtual);
+        }
 
         // Função TXT -> Excel
         function converterTxtParaExcel() {
