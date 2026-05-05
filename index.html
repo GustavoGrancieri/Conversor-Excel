@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversor</title>
+    <!-- Importa a biblioteca SheetJS para ler/gravar Excel sem alterar datas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            text-align: center; 
+            margin-top: 50px; 
+            /* Fundo Bege Claro da imagem */
+            background-color: #0A173A; 
+        }
+        .container { 
+            background: white; 
+            padding: 30px; 
+            border-radius: 8px; 
+            box-shadow: 0px 4px 15px rgba(10, 23, 58, 0.15); 
+            display: inline-block; 
+            max-width: 400px;
+        }
+        h2 {
+            /* Título no Azul Marinho Escuro */
+            color: #0A173A;
+            margin-top: 0;
+        }
+        p {
+            /* Texto explicativo no Cinza */
+            color: #8B8D91;
+        }
+        button { 
+            display: block; 
+            width: 100%; 
+            margin: 15px 0; 
+            padding: 15px; 
+            font-size: 16px; 
+            cursor: pointer; 
+            border: none; 
+            border-radius: 4px; 
+            color: white; 
+            font-weight: bold; 
+            transition: 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        /* Botão 1: Azul Marinho */
+        #btnExcel { background-color: #0A173A; } 
+        
+        /* Botão 2: Cinza */
+        #btnTxt { background-color: #8B8D91; } 
+        
+        /* Botão 3 (Ação Principal): Dourado */
+        #btnConvert { background-color: #B69752; color: #0A173A; font-weight: 900;} 
+        
+        button:hover { opacity: 0.85; transform: scale(1.02); }
+        input[type="file"] { display: none; }
+        
+        #status { 
+            margin-top: 20px; 
+            font-weight: bold; 
+            /* Status no Azul Marinho */
+            color: #0A173A; 
+            min-height: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Conversor de Arquivos</h2>
+        <p>Selecione um arquivo abaixo e clique em converter.</p>
+
+        <!-- Inputs ocultos para carregar os arquivos -->
+        <input type="file" id="inputExcel" accept=".xlsx, .xls">
+        <input type="file" id="inputTxt" accept=".txt">
+
+        <!-- Botão 1: Adicionar Excel -->
+        <button id="btnExcel" onclick="document.getElementById('inputExcel').click()">
+            1. Adicionar Arquivo Excel
+        </button>
+
+        <!-- Botão 2: Adicionar TXT -->
+        <button id="btnTxt" onclick="document.getElementById('inputTxt').click()">
+            2. Adicionar Arquivo TXT
+        </button>
+
+        <!-- Botão 3: Converter -->
+        <button id="btnConvert" onclick="converter()">
+            3. Converter Arquivo
+        </button>
+
+        <div id="status">Nenhum arquivo selecionado.</div>
+    </div>
+
+    <script>
+        let arquivoAtual = null;
+        let tipoArquivo = ''; // Variável para saber se é 'excel' ou 'txt'
+
+        // Evento ao escolher arquivo Excel
+        document.getElementById('inputExcel').addEventListener('change', function(e) {
+            if(e.target.files.length > 0) {
+                arquivoAtual = e.target.files[0];
+                tipoArquivo = 'excel';
+                document.getElementById('status').innerText = "Pronto para converter: " + arquivoAtual.name;
+                document.getElementById('inputTxt').value = ''; // Limpa a seleção do TXT
+            }
+        });
+
+        // Evento ao escolher arquivo TXT
+        document.getElementById('inputTxt').addEventListener('change', function(e) {
+            if(e.target.files.length > 0) {
+                arquivoAtual = e.target.files[0];
+                tipoArquivo = 'txt';
+                document.getElementById('status').innerText = "Pronto para converter: " + arquivoAtual.name;
+                document.getElementById('inputExcel').value = ''; // Limpa a seleção do Excel
+            }
+        });
+
+        // Logica do botão converter
+        function converter() {
+            if (!arquivoAtual) {
+                alert("Por favor, clique em um dos botões acima para adicionar um arquivo primeiro!");
+                return;
+            }
+
+            document.getElementById('status').innerText = "Convertendo...";
+
+            if (tipoArquivo === 'excel') {
+                converterExcelParaTxt();
+            } else if (tipoArquivo === 'txt') {
+                converterTxtParaExcel();
+            }
+        }
+
+        function converterExcelParaTxt() {
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+        const data = e.target.result;
+
+        const workbook = XLSX.read(data, {
+            type: 'array',
+            cellDates: true
+        });
+
+        const primeiraPlanilha = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[primeiraPlanilha];
+
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+            raw: true // <-- importante
+        });
+
+        const dadosFormatados = jsonData.map(linha => {
+            const novaLinha = {};
+
+            for (let chave in linha) {
+                let valor = linha[chave];
+
+                // Detecta Date real
+                if (valor instanceof Date) {
+                    const dia = String(valor.getDate()).padStart(2, '0');
+                    const mes = String(valor.getMonth() + 1).padStart(2, '0');
+                    const ano = valor.getFullYear();
+
+                    valor = `${dia}/${mes}/${ano}`;
+                }
+
+                novaLinha[chave] = valor;
+            }
+
+            return novaLinha;
+        });
+
+        const sheet = XLSX.utils.json_to_sheet(dadosFormatados);
+
+        const txtFinal = XLSX.utils.sheet_to_csv(sheet, {
+            FS: "\t"
+        });
+
+        baixarArquivo(
+            txtFinal,
+            arquivoAtual.name.replace(/\.[^/.]+$/, "") + ".txt",
+            "text/plain"
+        );
+    };
+
+    reader.readAsArrayBuffer(arquivoAtual);
+}
+
+        // Função TXT -> Excel
+        function converterTxtParaExcel() {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                // Quebra o texto por linhas e depois por tabulações (padrão de colunas em TXT)
+                const rows = text.split('\n');
+                const dataArray = rows.map(row => row.split('\t'));
+
+                // Cria uma nova planilha do zero
+                const worksheet = XLSX.utils.aoa_to_sheet(dataArray);
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, "Planilha1");
+
+                XLSX.writeFile(workbook, arquivoAtual.name.replace(/\.[^/.]+$/, "") + ".xlsx");
+                document.getElementById('status').innerText = "Conversão concluída!";
+            };
+            reader.readAsText(arquivoAtual);
+        }
+
+        // Função para iniciar o download do arquivo convertido
+        function baixarArquivo(conteudo, nomeArquivo, tipo) {
+            const blob = new Blob([conteudo], { type: tipo });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = nomeArquivo;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            document.getElementById('status').innerText = "Conversão concluída!";
+        }
+    </script>
+</body>
+</html>
