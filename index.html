@@ -4,14 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Conversor</title>
-    <!-- Importa a biblioteca SheetJS para ler/gravar Excel sem alterar datas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
             text-align: center; 
             margin-top: 50px; 
-            /* Fundo Bege Claro da imagem */
             background-color: #0A173A; 
         }
         .container { 
@@ -23,12 +21,10 @@
             max-width: 400px;
         }
         h2 {
-            /* Título no Azul Marinho Escuro */
             color: #0A173A;
             margin-top: 0;
         }
         p {
-            /* Texto explicativo no Cinza */
             color: #8B8D91;
         }
         button { 
@@ -46,13 +42,10 @@
             text-transform: uppercase;
             letter-spacing: 1px;
         }
-        /* Botão 1: Azul Marinho */
         #btnExcel { background-color: #0A173A; } 
         
-        /* Botão 2: Cinza */
         #btnTxt { background-color: #8B8D91; } 
         
-        /* Botão 3 (Ação Principal): Dourado */
         #btnConvert { background-color: #B69752; color: #0A173A; font-weight: 900;} 
         
         button:hover { opacity: 0.85; transform: scale(1.02); }
@@ -61,7 +54,6 @@
         #status { 
             margin-top: 20px; 
             font-weight: bold; 
-            /* Status no Azul Marinho */
             color: #0A173A; 
             min-height: 20px;
         }
@@ -72,21 +64,17 @@
         <h2>Conversor de Arquivos</h2>
         <p>Selecione um arquivo abaixo e clique em converter.</p>
 
-        <!-- Inputs ocultos para carregar os arquivos -->
         <input type="file" id="inputExcel" accept=".xlsx, .xls, .csv">
         <input type="file" id="inputTxt" accept=".txt">
 
-        <!-- Botão 1: Adicionar Excel -->
         <button id="btnExcel" onclick="document.getElementById('inputExcel').click()">
             1. Adicionar Arquivo Excel
         </button>
 
-        <!-- Botão 2: Adicionar TXT -->
         <button id="btnTxt" onclick="document.getElementById('inputTxt').click()">
             2. Adicionar Arquivo TXT
         </button>
 
-        <!-- Botão 3: Converter -->
         <button id="btnConvert" onclick="converter()">
             3. Converter Arquivo
         </button>
@@ -96,7 +84,7 @@
 
     <script>
         let arquivoAtual = null;
-        let tipoArquivo = ''; // Variável para saber se é 'excel' ou 'txt'
+        let tipoArquivo = ''; 
 
         // Evento ao escolher arquivo Excel
         document.getElementById('inputExcel').addEventListener('change', function(e) {
@@ -142,7 +130,7 @@
 
                 const workbook = XLSX.read(data, {
                     type: 'array',
-                    cellDates: true // Transforma datas do Excel em objetos Date no JS
+                    cellDates: true 
                 });
 
                 const primeiraPlanilha = workbook.SheetNames[0];
@@ -158,21 +146,17 @@
                     for (let chave in linha) {
                         let valor = linha[chave];
 
-                        // 1. Detecta Date real
                         if (valor instanceof Date) {
-                            // Usar GetUTC para evitar perda de 1 dia por causa do fuso horário brasileiro (GMT-3)
                             const dia = String(valor.getUTCDate()).padStart(2, '0');
                             const mes = String(valor.getUTCMonth() + 1).padStart(2, '0');
                             const ano = valor.getUTCFullYear();
 
                             valor = `${dia}/${mes}/${ano}`;
                         } 
-                        // 2. Detecta datas que vieram como texto no formato ISO (ex: YYYY-MM-DD ou YYYY/MM/DD)
                         else if (typeof valor === 'string') {
                             const regexDataISO = /^(\d{4})[-/](\d{2})[-/](\d{2})(T.*)?$/;
                             const match = valor.match(regexDataISO);
                             if (match) {
-                                // Pega os grupos capturados e inverte para DD/MM/YYYY
                                 valor = `${match[3]}/${match[2]}/${match[1]}`;
                             }
                         }
@@ -204,11 +188,9 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 const text = e.target.result;
-                // Quebra o texto por linhas e depois por tabulações (padrão de colunas em TXT)
                 const rows = text.split('\n');
                 const dataArray = rows.map(row => row.split('\t'));
 
-                // Cria uma nova planilha do zero
                 const worksheet = XLSX.utils.aoa_to_sheet(dataArray);
                 const workbook = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(workbook, worksheet, "Planilha1");
@@ -219,7 +201,6 @@
             reader.readAsText(arquivoAtual);
         }
 
-        // Função para iniciar o download do arquivo convertido
         function baixarArquivo(conteudo, nomeArquivo, tipo) {
             const blob = new Blob([conteudo], { type: tipo });
             const link = document.createElement("a");
